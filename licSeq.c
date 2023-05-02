@@ -26,11 +26,16 @@ int	main(int argc, char **argv)
 {
     clock_t start,end;
     start = clock();
-
-    int left = 110, right = 140, low =12, high = 32;
+    /*
+        Note:
+            根据根据所读取的文件中的第一列、第二列的数据来设置left, right, low, high这些值.
+    */
+    // 根据fielddata.txt发现，left和right应该是指第1列元素的最小值和最大值，low和high指第2列元素的最小值和最大值
+    // int left = 110, right = 140, low =12, high = 32;
+    float left = -180, right = 179.75, low = -80, high = 79.75;
     float res=0.25;
-    int				n_xres = (right-left)/res+1;
-    int				n_yres = (high-low)/res+1;
+    int				n_xres = (int)((right-left)/res)+1;
+    int				n_yres = (int)((high-low)/res)+1;
 
     float*			pVectr = (float*         ) malloc( sizeof(float        ) * n_xres * n_yres * 2 );
     int*			pVectrFlag = (int*       ) malloc( sizeof(int          ) * n_xres * n_yres * 2 );
@@ -44,7 +49,7 @@ int	main(int argc, char **argv)
     MakeWhiteNoise(n_xres, n_yres, pNoise);
     GenBoxFiltrLUT(DISCRETE_FILTER_SIZE, p_LUT0, p_LUT1);
     FlowImagingLIC(n_xres, n_yres, pVectr, pNoise, pImage, p_LUT0, p_LUT1, LOWPASS_FILTR_LENGTH);
-    WriteImage2PPM(n_xres, n_yres, pVectrFlag, pImage, "LIC.ppm");  //这里其实就是将fieldata.txt中的数据可视化成一张ppm图像
+    WriteImage2PPM(n_xres, n_yres, pVectrFlag, pImage, "LIC-global.ppm");  //这里其实就是将fieldata.txt中的数据可视化成一张ppm图像
 
     free(pVectr);	pVectr = NULL;
     free(p_LUT0);	p_LUT0 = NULL;
@@ -74,15 +79,17 @@ int	main(int argc, char **argv)
 ///		read the vector field     ///
 void ReadVector(int xres, int yres, float*  pVectr, int* pVectrFlag) {
     FILE *fp;
-    if ((fp = fopen("./fielddata.txt", "r")) == NULL) {
+    if ((fp = fopen("./fielddataglobal.txt", "r")) == NULL) {
         printf("error in reading file !\n");
         exit(1);
     }
     float f1, f2, f3, f4;
     int index = 0;
     while (!feof(fp)) {
-        if (fscanf(fp, "%f %f %f %f", &f1, &f2, &f3, &f4) == EOF)
+        if (fscanf(fp, "%f %f %f %f", &f1, &f2, &f3, &f4) == EOF){
+            printf("Index:%d", index);
             break;
+        }
         // printf( "%f %f %f %f \n", f1, f2, f3, f4);
         pVectr[index] = f3;
         if((int)(f3-9999)==0){
