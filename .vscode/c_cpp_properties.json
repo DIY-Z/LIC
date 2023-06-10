@@ -4,7 +4,7 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "/home/zdl/Downloads/mpi/include"
+                "/home/ouc/MPI/include"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",
