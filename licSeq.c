@@ -28,17 +28,17 @@ int	main(int argc, char **argv)
     start = clock();
     /*
         Note:
-            根据根据所读取的文件中的第一列、第二列的数据来设置left, right, low, high这些值.
+            根据所读取的文件中的第一列、第二列的数据来设置left, right, low, high这些值.
     */
     // 根据fielddata.txt发现，left和right应该是指第1列元素的最小值和最大值，low和high指第2列元素的最小值和最大值
     // int left = 110, right = 140, low =12, high = 32;
     float left = -180, right = 179.75, low = -80, high = 79.75;
     float res=0.25;
-    int				n_xres = (int)((right-left)/res)+1;
-    int				n_yres = (int)((high-low)/res)+1;
+    int				n_xres = (int)((right-left)/res)+1;         //n_xres相当于经度个数，每个经度之间相隔0.25，经度范围[left,right]
+    int				n_yres = (int)((high-low)/res)+1;           //n_yres相当于纬度个数，每个纬度之间相隔0.25，纬度范围[low, high]
 
-    float*			pVectr = (float*         ) malloc( sizeof(float        ) * n_xres * n_yres * 2 );
-    int*			pVectrFlag = (int*       ) malloc( sizeof(int          ) * n_xres * n_yres * 2 );
+    float*			pVectr = (float*         ) malloc( sizeof(float        ) * n_xres * n_yres * 2 );   //pVectr用于存后两列的值,U和V
+    int*			pVectrFlag = (int*       ) malloc( sizeof(int          ) * n_xres * n_yres * 2 );   //pVectrFlag用于标记索引在pVectr是否是9999
     float*			p_LUT0 = (float*		 ) malloc( sizeof(float        ) * DISCRETE_FILTER_SIZE);
     float*			p_LUT1 = (float*		 ) malloc( sizeof(float        ) * DISCRETE_FILTER_SIZE);
     unsigned char*	pNoise = (unsigned char* ) malloc( sizeof(unsigned char) * n_xres * n_yres     );
@@ -86,7 +86,7 @@ void ReadVector(int xres, int yres, float*  pVectr, int* pVectrFlag) {
     float f1, f2, f3, f4;
     int index = 0;
     while (!feof(fp)) {
-        if (fscanf(fp, "%f %f %f %f", &f1, &f2, &f3, &f4) == EOF){
+        if (fscanf(fp, "%f %f %f %f", &f1, &f2, &f3, &f4) == EOF){   //读到末尾就结束
             printf("Index:%d", index);
             break;
         }
@@ -108,13 +108,13 @@ void ReadVector(int xres, int yres, float*  pVectr, int* pVectrFlag) {
 }
 
 
-///		normalize the vector field     ///
+///		normalize the vector field (no bug)    ///
 void    NormalizVectrs(int  n_xres,  int  n_yres,  float*  pVectr)
 {
     for(int	 j = 0;  j < n_yres;  j ++)
         for(int	 i = 0;  i < n_xres;  i ++)
         {
-            int		index = (j * n_xres + i) << 1;
+            int		index = (j * n_xres + i) << 1;      //左移一位，相当于乘2，目的是找到对应位置的索引
             float	vcMag = (float)(  sqrt( (double)(pVectr[index] * pVectr[index] + pVectr[index + 1] * pVectr[index + 1]) )  );
 
             float	scale = (vcMag == 0.0f) ? 0.0f : 1.0f / vcMag;
@@ -124,20 +124,20 @@ void    NormalizVectrs(int  n_xres,  int  n_yres,  float*  pVectr)
 }
 
 
-///		make white noise as the LIC input texture     ///
+///		make white noise as the LIC input texture (no bug)    ///
 void	MakeWhiteNoise(int  n_xres,  int  n_yres,  unsigned char*  pNoise)
 {
     for(int  j = 0;   j < n_yres;  j ++)
         for(int  i = 0;   i < n_xres;  i ++)
         {
             int  r = rand();
-            r = (  (r & 0xff) + ( (r & 0xff00) >> 8 )  ) & 0xff;
+            r = (  (r & 0xff) + ( (r & 0xff00) >> 8 )  ) & 0xff;     //0xff指255, 0xff00指65280， 65280 / 255 = 256，而256 = 16 * 16，正好如这个十六进制数所示
             pNoise[j * n_xres + i] = (unsigned char) r;
         }
 }
 
 
-///		generate box filter LUTs     ///
+///		generate box filter LUTs (no bug)    ///
 void    GenBoxFiltrLUT(int  LUTsiz,  float*  p_LUT0,  float*  p_LUT1)
 {
     for(int  i = 0;  i < LUTsiz;  i ++)  p_LUT0[i] = p_LUT1[i] = i;
@@ -173,7 +173,7 @@ void	WriteImage2PPM(int  n_xres,  int  n_yres,   int* pVectrFlag, unsigned char*
 }
 
 
-///		flow imaging (visualization) through Line Integral Convolution     ///
+///		flow imaging (visualization) through Line Integral Convolution (no bug)     ///
 void	FlowImagingLIC(int     n_xres,  int     n_yres,  float*  pVectr,  unsigned char*  pNoise,  unsigned char*  pImage,
                        float*  p_LUT0,  float*  p_LUT1,  float   krnlen)
 {
@@ -225,7 +225,7 @@ void	FlowImagingLIC(int     n_xres,  int     n_yres,  float*  pVectr,  unsigned 
                 while( curLen < krnlen && advcts < ADVCTS )
                 {
                     ///access the vector at the sample///
-                    vec_id = ( (int)(clp0_y) * n_xres + (int)(clp0_x) )<<1;
+                    vec_id = ( (int)(clp0_y) * n_xres + (int)(clp0_x) )<<1;         //目的是找到目标位置的索引
                     vctr_x = pVectr[vec_id    ];
                     vctr_y = pVectr[vec_id + 1];
 
